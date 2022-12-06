@@ -1,0 +1,218 @@
+Replica set
+
+Write a common use-case, where you will use a daemon set instead of replica set.
+
+Answer:
+Daemon set is most commonly used to perform system level operation such as collecting the log from all the node and monitoring the resources in all the node.
+------------------------------------------------------------------------------------------------------------------------------------------------
+Deployment:
+Suppose you have deployed your application using a deployment controller. Assume the initial number of replicas is one. Write the steps needed to update a container's image using deployment, making sure that there is zero downtime.
+
+Solution:
+        The Image of the Deployment can updated in the below steps
+    1) Deploy the Development
+
+            kubectl apply -f kubia-deployment-and-service-v1.yaml
+    2) Check for the minReadySecond param value and set it to 10s so that there is no need to bring the pod downtime
+            
+            kubectl explain deploy.spec.minReadySeconds
+            kubectl patch deployment kubia -p '{"spec": {"minReadySeconds": 10}}'
+    
+    3) Use the below command to set the image value in the Deployment
+
+            kubectl set image deployment kubia nodejs=luksa/kubia:v2
+Note : You can only update the image only when the kind is "Deployment" it wont work for Kind :"replicaset"
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+Service :
+
+    You have deployed an application, that is listening at port 8000. You used a replica-set to deploy it and created a NodePort service to make it accessible. But when you test it, somehow the application is not reachable at the port. Write down your approach and sequentially all the steps that you will take to find out the issue.
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+VOTING APP DEMO:-
+
+Solution
+Step 1 to 3 was done.
+Step 4 : Deploy all pods present in the voting application 
+
+Command : kubectl apply -f .
+
+output:
+
+[root@ip-172-31-10-244 k8s-specifications]# kubectl apply -f .
+deployment.apps/db created
+service/db created
+deployment.apps/redis created
+service/redis created
+deployment.apps/result created
+service/result created
+deployment.apps/vote created
+service/vote created
+deployment.apps/worker created
+[root@ip-172-31-10-244 k8s-specifications]#
+
+Step 5 : check the Status of all the pods 
+
+command : kubectl get all
+
+output :
+
+[root@ip-172-31-10-244 k8s-specifications]# kubectl get all 
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/db-b54cd94f4-rdl6b        1/1     Running   0          3m5s
+pod/redis-868d64d78-xpr4p     1/1     Running   0          3m5s
+pod/result-5d57b59f4b-5q28v   1/1     Running   0          3m5s
+pod/vote-94849dc97-8p77l      1/1     Running   0          3m5s
+pod/worker-dd46d7584-66gpl    1/1     Running   0          3m5s
+
+NAME                 TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+service/db           ClusterIP   10.100.150.162   <none>        5432/TCP         3m5s
+service/kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP          3m39s
+service/redis        ClusterIP   10.106.245.58    <none>        6379/TCP         3m5s
+service/result       NodePort    10.98.21.83      <none>        5001:31001/TCP   3m5s
+service/vote         NodePort    10.100.81.185    <none>        5000:31000/TCP   3m5s
+
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/db       1/1     1            1           3m5s
+deployment.apps/redis    1/1     1            1           3m5s
+deployment.apps/result   1/1     1            1           3m5s
+deployment.apps/vote     1/1     1            1           3m5s
+deployment.apps/worker   1/1     1            1           3m5s
+
+NAME                                DESIRED   CURRENT   READY   AGE
+replicaset.apps/db-b54cd94f4        1         1         1       3m5s
+replicaset.apps/redis-868d64d78     1         1         1       3m5s
+replicaset.apps/result-5d57b59f4b   1         1         1       3m5s
+replicaset.apps/vote-94849dc97      1         1         1       3m5s
+replicaset.apps/worker-dd46d7584    1         1         1       3m5s
+[root@ip-172-31-10-244 k8s-specifications]# 
+
+
+
+
+
+
+Step 6: Open browser and go the follwing URL 
+    http://10.98.21.83:31000 To go to the voting page, 
+    http://10.98.21.83:31001 to view the results of the voiting
+
+
+Step 8 & 9: 
+
+    a) Deleting the voting pod.
+
+        [root@ip-172-31-10-244 k8s-specifications]# kubectl get po 
+        NAME                      READY   STATUS    RESTARTS   AGE
+        db-b54cd94f4-rdl6b        1/1     Running   0          6m8s
+        redis-868d64d78-xpr4p     1/1     Running   0          6m8s
+        result-5d57b59f4b-5q28v   1/1     Running   0          6m8s
+        vote-94849dc97-8p77l      1/1     Running   0          6m8s
+        worker-dd46d7584-66gpl    1/1     Running   0          6m8s
+
+        command : 
+                kubectl delete pod vote-94849dc97-8p77l
+
+        output: 
+
+                [root@ip-172-31-10-244 k8s-specifications]# 
+                [root@ip-172-31-10-244 k8s-specifications]# kubectl delete pod vote-94849dc97-8p77l
+                pod "vote-94849dc97-8p77l" deleted
+
+
+                [root@ip-172-31-10-244 k8s-specifications]# kubectl get po 
+                NAME                      READY   STATUS        RESTARTS   AGE
+                db-b54cd94f4-rdl6b        1/1     Running       0          7m8s
+                redis-868d64d78-xpr4p     1/1     Running       0          7m8s
+                result-5d57b59f4b-5q28v   1/1     Running       0          7m8s
+                vote-94849dc97-8p77l      0/1     Terminating   0          7m8s
+                vote-94849dc97-nd7ph      1/1     Running       0          6s
+                worker-dd46d7584-66gpl    1/1     Running       0          7m8s
+
+
+        Here as we see once the voting pod is deleted there is new voting pod created as this pod is replica
+        The application has no impact because of the voting pod deletion.
+
+
+    b) Deleting the worker pod.
+
+
+        [root@ip-172-31-10-244 k8s-specifications]# kubectl get po 
+        NAME                      READY   STATUS    RESTARTS   AGE
+        db-b54cd94f4-rdl6b        1/1     Running   0          10m
+        redis-868d64d78-xpr4p     1/1     Running   0          10m
+        result-5d57b59f4b-5q28v   1/1     Running   0          10m
+        vote-94849dc97-nd7ph      1/1     Running   0          3m26s
+        worker-dd46d7584-66gpl    1/1     Running   0          10m
+
+
+        Command 
+
+                kubectl delete pod worker-dd46d7584-66gpl
+
+        output : 
+
+                [root@ip-172-31-10-244 k8s-specifications]# kubectl delete pod worker-dd46d7584-66gpl
+                pod "worker-dd46d7584-66gpl" deleted
+
+                [root@ip-172-31-10-244 k8s-specifications]# kubectl get po 
+                NAME                      READY   STATUS        RESTARTS   AGE
+                db-b54cd94f4-rdl6b        1/1     Running       0          11m
+                redis-868d64d78-xpr4p     1/1     Running       0          11m
+                result-5d57b59f4b-5q28v   1/1     Running       0          11m
+                vote-94849dc97-nd7ph      1/1     Running       0          4m35s
+                worker-dd46d7584-66gpl    1/1     Terminating   0          11m
+                worker-dd46d7584-wwchb    1/1     Running       0          4s
+
+        Here as we see once the working pod is deleted there is new worker pod created as this pod is replica
+        The application has no impact because of the worker pod deletion.
+
+    c) Deleting the DB pod
+
+        [root@ip-172-31-10-244 k8s-specifications]# kubectl get po 
+        NAME                      READY   STATUS    RESTARTS   AGE
+        db-b54cd94f4-rdl6b        1/1     Running   0          13m
+        redis-868d64d78-xpr4p     1/1     Running   0          13m
+        result-5d57b59f4b-5q28v   1/1     Running   0          13m
+        vote-94849dc97-nd7ph      1/1     Running   0          6m19s
+        worker-dd46d7584-wwchb    1/1     Running   0          108s
+
+        command : 
+                    kubectl delete pod db-b54cd94f4-rdl6b
+
+        output: 
+                    [root@ip-172-31-10-244 k8s-specifications]# 
+                    [root@ip-172-31-10-244 k8s-specifications]# kubectl delete pod db-b54cd94f4-rdl6b
+                    pod "db-b54cd94f4-rdl6b" deleted
+
+                    [root@ip-172-31-10-244 k8s-specifications]# kubectl get po 
+                    NAME                      READY   STATUS        RESTARTS   AGE
+                    db-b54cd94f4-ntqpb        1/1     Running       0          5s
+                    db-b54cd94f4-rdl6b        1/1     Terminating   0          14m
+                    redis-868d64d78-xpr4p     1/1     Running       0          14m
+                    result-5d57b59f4b-5q28v   1/1     Running       0          14m
+                    vote-94849dc97-nd7ph      1/1     Running       0          7m1s
+                    worker-dd46d7584-wwchb    1/1     Running       0          2m30s
+
+Steps 9 & 10 
+        Observation: 
+                    1) Once the DB pod is deleted new instance of the DB pod is created.
+                    2) There is a impact in the application. Where the Voting data is stored in the DB but The same is not reflected in the Result Page.
+                    3) The Reason for the data not updating in the result page is that the when the DB Pod was deleted the socket connection towards the Result pod got disconnected.
+                        The new DB pod which was created did not connect to the Result pod, because of the coding issue in the Application where these error handling was not done in the application.
+
+Steps 11 & 12
+
+        Soltuion:
+                    1) To fix the issue with the applicationas a worker-round we restated the Result Pod or Delete the Result Pod.
+                    2) Once the Result pod instance is recreated then the socket connection is restored with the DB pod and the Application starts to work as expected.
+                    3) Even though the Applcation is up and running, the Previous voting data which was stored in the DB pod is lost due to the deltion of the DB pod.
+
+
+
+
+
+
+
+
